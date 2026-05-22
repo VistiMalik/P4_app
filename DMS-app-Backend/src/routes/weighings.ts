@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
+import fastifyJwt from "@fastify/jwt";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { z } from "zod";
@@ -8,15 +9,8 @@ const createWeighingBodySchema = z.object({
     .string()
     .min(1, "Informe o material coletado."),
   weightGrams: z
-    .union([z.number(), z.string()])
-    .transform((value) => Number(value))
-    .pipe(
-      z
-        .number({
-          invalid_type_error: "Peso inválido."
-        })
-        .positive("O peso precisa ser maior que zero.")
-    ),
+    .string()
+    .min(1, "Informe o material coletado."),
   deviceExternalId: z
     .string()
     .trim()
@@ -111,6 +105,13 @@ export const weighingsRoutes: FastifyPluginAsync = async (server) => {
     async (request) => {
       const workerId = BigInt(request.user.userId);
       const body = createWeighingBodySchema.parse(request.body);
+
+      // Verify scale weighing
+      try {
+        body.weightGrams = await server.jwt.verify(body.weightGrams).weightGrams;
+      } catch {
+        return "Weight not originating from authorized scale";
+      }
 
       const worker = await prisma.workers.findUnique({
         where: { workerId },
