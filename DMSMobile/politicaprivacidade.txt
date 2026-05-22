@@ -1,0 +1,33 @@
+Declaracao de Politica de Privacidade - DMS Mobile
+
+Esta declaracao descreve de forma resumida como o DMS Mobile coleta e usa
+dados. Ela ainda esta incompleta e sera revisada.
+
+1. Dados coletados
+- Informacoes de conta (ex.: nome e identificadores fornecidos no login).
+- Dados de pesagens e historico de coletas.
+- Dados de uso do aplicativo.
+
+2. Permissoes do dispositivo
+- Bluetooth: necessario para conectar a balanca e registrar pesagens.
+- Localizacao: usada para localizar dispositivos Bluetooth proximos.
+
+3. Uso das informacoes
+Usamos os dados para autenticar o usuario, registrar pesagens, gerar
+historicos e indicadores, e oferecer gamificacao.
+
+4. Compartilhamento
+Os dados podem ser enviados para a API da cooperativa para sincronizacao.
+
+5. Retencao e seguranca
+Dados retidos de acordo com política da cooperativa que faz parte
+
+6. Direitos do usuario
+Exclusão de dados solicitada através da cooperativa ou dos contatos listados no item 7
+
+7. Contato
+antonio.guimaraes837@gmail.com
++556195148368
+
+8. Alteracoes
+Alterações serão enviadas diretamente aos usuários após atualização
