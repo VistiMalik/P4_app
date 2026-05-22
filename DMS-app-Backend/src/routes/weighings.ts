@@ -144,39 +144,21 @@ export const weighingsRoutes: FastifyPluginAsync = async (server) => {
         });
       }
 
-      const rows = await prisma.$queryRawUnsafe<InsertedMeasurementRow[]>(`
-      INSERT INTO "Measurments"
-        ("Weight_KG", "Time_stamp", "Bag_filled", "Wastepicker", "Material", "Device")
-      VALUES
-        (
-          ${gramsToKilogramsDecimal(body.weightGrams)},
-          NOW(),
-          ${body.bagFilled ?? false},
-          ${workerId},
-          ${material.materialId},
-          ${device.deviceId}
-        )
-      RETURNING
-        "Weighting_id" AS "id",
-        "Wastepicker" AS "userId",
-        "Material" AS "materialId",
-        '${material.materialName}' AS "materialName",
-        "Weight_KG" AS "weightKg",
-        "Time_stamp" AS "createdAt";
-      `);
+      const measurement = await prisma.measurments.create({
+        data: {
+          weightKg: gramsToKilogramsDecimal(body.weightGrams),
+          timeStamp: new Date(),
+          bagFilled: body.bagFilled ?? false,
+          wastepicker: workerId,
+          material: material.materialId,
+          device: device.deviceId
+        },
+        include: {
+          materialRef: true
+        }
+      });
 
-      const measurement = rows[0];
-      
-
-
-      return {
-        id: measurement.id.toString(),
-        userId: measurement.userId.toString(),
-        materialId: measurement.materialId.toString(),
-        materialName: measurement.materialName,
-        weightGrams: Math.round(new Prisma.Decimal(measurement.weightKg).mul(1000).toNumber()),
-        createdAt: measurement.createdAt.toISOString()
-      };
+      return measurementToDto(measurement);
     }
   );
 
