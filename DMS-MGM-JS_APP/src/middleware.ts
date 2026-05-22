@@ -1,22 +1,24 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from "jose";
 
 // JWT secret key - should match the one in the login API
 const JWT_SECRET = process.env.JWT_SECRET || 'dms-dashboard-secret-key';
+const secret = new TextEncoder().encode(JWT_SECRET);
 
-// Simple function to verify JWT token format without decoding
-// This is a simplified version for testing - in production use proper verification
-function verifyToken(token: string): boolean {
+// Fixed verification of jwt
+async function verifyToken(token: string): Promise<boolean> {
   try {
-    // Simple check: JWT tokens have 3 parts separated by dots
-    const parts = token.split('.');
-    return parts.length === 3;
+    await jwtVerify(token, secret, {
+      algorithms: ["HS256"],
+    });
+    return true;
   } catch (error) {
     return false;
   }
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // Paths that don't require authentication
   const publicPaths = ['/login', '/api/auth/login'];
   
@@ -36,7 +38,7 @@ export function middleware(request: NextRequest) {
   // If it's a public path, allow access
   if (isPublicPath) {
     // If user is already logged in and trying to access login page, redirect to dashboard
-    if (authToken && verifyToken(authToken) && request.nextUrl.pathname === '/login') {
+    if (authToken && await verifyToken(authToken) && request.nextUrl.pathname === '/login') {
       return NextResponse.redirect(new URL('/', request.url));
     }
     
@@ -44,7 +46,7 @@ export function middleware(request: NextRequest) {
   }
   
   // For protected routes, check if user is authenticated
-  if (!authToken || !verifyToken(authToken)) {
+  if (!authToken || !(await verifyToken(authToken))) {
     // For API routes, return 401 Unauthorized
     if (isApiRoute) {
       return NextResponse.json(
