@@ -108,6 +108,7 @@ export async function POST(request: Request) {
         id: workerId.toString(),
         name: fullName,
         cpf: normalizedCpf,
+        ip: request.headers.get('x-forwarded-for')?.split(',')[0],
         userType,
       },
       JWT_SECRET,
