@@ -13,10 +13,19 @@ const loginBodySchema = z.object({
 });
 
 export const authRoutes: FastifyPluginAsync = async (server) => {
-  server.post(
-    "/login",
-    async (request, reply) => {
-      const { cpf, password } = loginBodySchema.parse(request.body);
+  server.post("/login", async (request, reply) => {
+  let parsedBody;
+  try {
+    parsedBody = loginBodySchema.parse(request.body);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      // Log input validation errors for security monitoring)
+      server.log.warn(`Validation error during login attempt: ${JSON.stringify(error.issues)}`);
+      throw server.httpErrors.badRequest("Invalid data format.");
+    }
+    throw error;
+  }
+      const { cpf, password } = parsedBody;
       const worker = await prisma.workers.findFirst({
         where: { cpf: Buffer.from(cpf, "utf-8") },
         select: {
@@ -37,19 +46,26 @@ export const authRoutes: FastifyPluginAsync = async (server) => {
       });
 
       if (!worker || !worker.password) {
-        throw server.httpErrors.unauthorized("Credenciais inválidas.");
+        // Log failed login attempt with worker ID (without password) for security monitoring
+        server.log.warn(`Failed login attempt for user: ${worker?.workerId?.toString() ?? "unknown"}`);
+        throw server.httpErrors.unauthorized("Credenciais inválidas."); 
       }
 
       const passwordHash = Buffer.from(worker.password).toString("utf-8");
       const isValidPassword = await compare(password, passwordHash);
 
       if (!isValidPassword) {
+        // Log failed login attempt with worker ID (without password) for security monitoring
+        server.log.warn(`Failed login attempt for user: ${worker.workerId ? worker.workerId.toString() : "unknown"}`);
         throw server.httpErrors.unauthorized("Credenciais inválidas.");
       }
 
       const token = await server.jwt.sign({
         userId: worker.workerId.toString()
       });
+
+      // Log successful login with worker ID for security monitoring
+      server.log.info(`Successful login for user: ${worker.workerId.toString()}`);
 
       const workerCpf =
         worker.cpf && worker.cpf.length > 0
@@ -102,8 +118,13 @@ export const authRoutes: FastifyPluginAsync = async (server) => {
       });
 
       if (!worker) {
+        // Log failed access attempt with worker ID for security monitoring
+        server.log.warn(`Failed access attempt to /me for user: ${workerId.toString()}`);
         throw server.httpErrors.notFound("Trabalhador não encontrado.");
       }
+
+      // Log successful access to /me with worker ID for security monitoring
+      server.log.info(`Successful access to /me for user: ${workerId.toString()}`);
 
       const workerCpf =
         worker.cpf && worker.cpf.length > 0
@@ -158,26 +179,50 @@ export const authRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request) => {
       const workerId = BigInt(request.user.userId);
-      const { name, email, bank_number, currentPassword, newPassword } =
-        updateProfileBodySchema.parse(request.body);
+      let parsedBody;
+      try {
+        parsedBody = updateProfileBodySchema.parse(request.body);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          // Log input validation errors for security monitoring)
+          server.log.warn(`Validation error during update profile attempt: ${JSON.stringify(error.issues)}`);
+          throw server.httpErrors.badRequest("Invalid data format.");
+        }
+        throw error;
+      }
+      const { name, email, bank_number, currentPassword, newPassword } = parsedBody;
 
       const worker = await prisma.workers.findUnique({
         where: { workerId }
       });
 
       if (!worker) {
+        // Log failed access attempt with worker ID for security monitoring
+        server.log.warn(`Failed access attempt to update profile for user: ${workerId.toString()}`);
         throw server.httpErrors.notFound("Trabalhador não encontrado.");
       }
 
       const updateData: any = {};
-      if (name) updateData.workerName = name;
-      if (email) updateData.email = email;
+      if (name) {
+        updateData.workerName = name;
+        // Log profile update with worker ID for security monitoring
+        server.log.info(`Profile name changed for user: ${workerId.toString()}`);
+      }
+      if (email) {
+        updateData.email = email;
+        // Log profile update with worker ID for security monitoring
+        server.log.info(`Profile email changed for user: ${workerId.toString()}`);
+      }
       if (bank_number !== undefined) {
         updateData.bankNumber = bank_number.trim() || null;
+        // Log profile update with worker ID for security monitoring
+        server.log.info(`Profile bank number changed for user: ${workerId.toString()}`);
       }
 
       if (newPassword && currentPassword) {
         if (!worker.password) {
+          // Log failed password change attempt with worker ID for security monitoring
+          server.log.warn(`Failed password change attempt for user: ${workerId.toString()} - no existing password set`);
           throw server.httpErrors.badRequest(
             "Usuário não possui senha definida para alteração."
           );
@@ -187,10 +232,14 @@ export const authRoutes: FastifyPluginAsync = async (server) => {
         );
         const isValid = await compare(currentPassword, currentPasswordHash);
         if (!isValid) {
+          // log failed password change attempt with worker ID for security monitoring
+          server.log.warn(`Failed password change attempt for user: ${workerId.toString()}`);
           throw server.httpErrors.unauthorized("Senha atual incorreta.");
         }
         const newPasswordHash = await hash(newPassword, 10);
         updateData.password = Buffer.from(newPasswordHash, "utf-8");
+        // Log password change with worker ID for security monitoring
+        server.log.info(`Password changed for user: ${workerId.toString()}`);
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -198,6 +247,9 @@ export const authRoutes: FastifyPluginAsync = async (server) => {
           worker.cpf && worker.cpf.length > 0
             ? Buffer.from(worker.cpf).toString("utf-8")
             : null;
+
+            // Log profile access without changes with worker ID for security monitoring
+            server.log.info(`Profile accessed without changes for user: ${workerId.toString()}`);
         return {
           message: "Nenhuma alteração realizada.",
           user: {

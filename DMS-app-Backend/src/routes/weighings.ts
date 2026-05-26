@@ -122,6 +122,8 @@ export const weighingsRoutes: FastifyPluginAsync = async (server) => {
       });
 
       if (!worker?.cooperative) {
+        // Log cooperative not found for authenticated worker for debugging
+        server.log.warn(`Cooperative not found for authenticated worker: ${workerId.toString()}`);
         throw server.httpErrors.badRequest(
           "Cooperativa não encontrada para o trabalhador autenticado."
         );
@@ -130,6 +132,8 @@ export const weighingsRoutes: FastifyPluginAsync = async (server) => {
       const material = await resolveMaterial(body.materialId);
 
       if (!material) {
+        // Log material not found with provided identifier for debugging
+        server.log.warn(`Material not found for identifier: ${body.materialId}`);
         throw server.httpErrors.notFound("Material não encontrado.");
       }
 
