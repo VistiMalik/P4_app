@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { sanitizeDigits } from '@/lib/db-utils';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
     });
 
     if (existing) {
+      logger.warn("User creation blocked: duplicate CPF");
       return NextResponse.json({ message: 'Já existe um usuário com este CPF' }, { status: 409 });
     }
 
@@ -92,6 +94,7 @@ export async function POST(request: Request) {
       },
     });
 
+    logger.info(`User created workerId=${created.workerId} userType=${userTypeNumber} cooperativeId=${created.cooperative}`);
     return NextResponse.json(
       {
         message: userTypeNumber === 1 ? 'Catador criado com sucesso!' : 'Usuário de gerência criado com sucesso!',

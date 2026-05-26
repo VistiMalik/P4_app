@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
     ]);
 
     if (salesUsage > 0 || measurementUsage > 0 || contributionsUsage > 0) {
+      logger.warn(`User delete blocked workerId=${workerId} sales=${salesUsage} measurements=${measurementUsage} contributions=${contributionsUsage}`);
       return NextResponse.json(
         {
           message:
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
       where: { workerId },
     });
 
+    logger.warn(`User deleted workerId=${workerId}`);
     return NextResponse.json({ message: 'Usuário excluído com sucesso' }, { status: 200 });
   } catch (error) {
     console.error('Error deleting user:', error);
