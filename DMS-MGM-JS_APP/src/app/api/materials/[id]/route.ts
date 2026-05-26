@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 type MaterialWithGroup = Prisma.MaterialsGetPayload<{
   include: { group: true };
@@ -71,6 +72,7 @@ export async function PUT(
     });
 
     if (duplicateMaterial) {
+      logger.warn(`Material update blocked: duplicate name materialId=${id} materialName=${materialName}`);
       return NextResponse.json(
         { error: 'Já existe outro material com este nome' },
         { status: 400 },
@@ -156,6 +158,7 @@ export async function DELETE(
       stockUsage > 0 ||
       contributionUsage > 0
     ) {
+      logger.warn(`Material delete blocked materialId=${id} measurements=${measurementUsage} sales=${salesUsage} stock=${stockUsage} contributions=${contributionUsage}`);
       return NextResponse.json(
         {
           error:
@@ -169,6 +172,7 @@ export async function DELETE(
       where: { materialId: id },
     });
 
+    logger.warn(`Material deleted materialId=${id}`);
     return NextResponse.json({
       success: true,
       message: 'Material excluído com sucesso',
