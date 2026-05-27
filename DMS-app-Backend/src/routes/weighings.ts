@@ -104,13 +104,26 @@ export const weighingsRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request) => {
       const workerId = BigInt(request.user.userId);
-      const body = createWeighingBodySchema.parse(request.body);
+      let parsedBody;
+      try {
+        parsedBody = createWeighingBodySchema.parse(request.body);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          // Log input validation errors for security monitoring)
+          server.log.warn(`Validation error during weighing creation: ${JSON.stringify(error.issues)}`);
+          throw server.httpErrors.badRequest("Invalid data format.");
+        }
+        throw error;
+        }
+      const body = parsedBody;
 
       // Verify scale weighing
       try {
         body.weightGrams = await server.jwt.verify(body.weightGrams).weightGrams;
       } catch {
-        return "Weight not originating from authorized scale";
+        // Log failed scale verification attempts for security monitoring
+        server.log.warn(`Failed scale verification attempt for workerId: ${workerId.toString()}`);
+        throw server.httpErrors.forbidden("Weight not originating from authorized scale");
       }
 
       const worker = await prisma.workers.findUnique({
@@ -122,6 +135,8 @@ export const weighingsRoutes: FastifyPluginAsync = async (server) => {
       });
 
       if (!worker?.cooperative) {
+        // Log cooperative not found for authenticated worker for debugging
+        server.log.warn(`Cooperative not found for authenticated worker: ${workerId.toString()}`);
         throw server.httpErrors.badRequest(
           "Cooperativa não encontrada para o trabalhador autenticado."
         );
@@ -130,6 +145,8 @@ export const weighingsRoutes: FastifyPluginAsync = async (server) => {
       const material = await resolveMaterial(body.materialId);
 
       if (!material) {
+        // Log material not found with provided identifier for debugging
+        server.log.warn(`Material not found for identifier: ${body.materialId}`);
         throw server.httpErrors.notFound("Material não encontrado.");
       }
 
@@ -158,6 +175,8 @@ export const weighingsRoutes: FastifyPluginAsync = async (server) => {
           materialRef: true
         }
       });
+      // Log successful weighing creation
+      server.log.info(`Successful weighing created. MeasurementId: ${measurement.weightingId.toString()} for workerId: ${workerId.toString()}`);
 
       return measurementToDto(measurement);
     }

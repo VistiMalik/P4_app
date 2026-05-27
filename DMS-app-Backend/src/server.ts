@@ -12,7 +12,12 @@ export function buildServer() {
   const server = Fastify({
     logger:
       env.NODE_ENV === "production"
-        ? true
+        ? {
+            transport: {
+              target: "pino/file",
+              options: { destination: "./logs/api.log" } // Skriver til fil i produktion
+            }
+          }
         : {
             transport: {
               target: "pino-pretty",
