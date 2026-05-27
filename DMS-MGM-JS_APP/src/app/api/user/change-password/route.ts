@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { decodeBytes } from '@/lib/db-utils';
-import { logger } from '@/lib/logger';
+import { logger, getResponsible } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
     const isCurrentValid = await bcrypt.compare(currentPassword, storedPassword);
     if (!isCurrentValid) {
-      logger.warn(`Password change failed: invalid current password workerId=${workerId}`);
+      logger.warn(`UserID=${getResponsible(request)} password change failed: invalid current password workerId=${workerId}`);
       return NextResponse.json({ message: 'Senha atual incorreta' }, { status: 401 });
     }
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       },
     });
 
-    logger.info(`Password changed successfully workerId=${workerId}`);
+    logger.info(`UserID=${getResponsible(request)} changed password successfully for workerId=${workerId}`);
     return NextResponse.json({ message: 'Senha atualizada com sucesso' });
   } catch (error) {
     console.error('Error updating password:', error);

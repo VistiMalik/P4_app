@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { decimalToNumber } from '@/lib/db-utils';
-import { logger } from '@/lib/logger';
+import { logger, getResponsible } from '@/lib/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dms-dashboard-secret-key';
 
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
   try {
     const manager = await getAuthenticatedManager();
     if (!manager) {
-      logger.warn("Create sale denied: user not manager");
+      logger.warn(`UserID=${getResponsible(request)} create sale denied: user not manager`);
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
 
     const currentStock = decimalToNumber(stockRecord.currentStockKg) ?? 0;
     if (weightSold > currentStock) {
-      logger.warn(`Create sale blocked: insufficient stock managerId=${manager.workerId} materialId=${materialId} requestedKg=${weightSold} availableKg=${currentStock}`);
+      logger.warn(`UserID=${getResponsible(request)} create sale blocked: insufficient stock managerId=${manager.workerId} materialId=${materialId} requestedKg=${weightSold} availableKg=${currentStock}`);
       return NextResponse.json(
         { error: `Estoque insuficiente! Disponível: ${currentStock.toFixed(2)} kg` },
         { status: 400 },
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    logger.info(`Sale created saleId=${sale.saleId} managerId=${manager.workerId} materialId=${materialId} weightKg=${weightSold} pricePerKg=${pricePerKg}`);
+    logger.info(`UserID=${getResponsible(request)} created saleId=${sale.saleId} managerId=${manager.workerId} materialId=${materialId} weightKg=${weightSold} pricePerKg=${pricePerKg}`);
     return NextResponse.json(
       {
         success: true,

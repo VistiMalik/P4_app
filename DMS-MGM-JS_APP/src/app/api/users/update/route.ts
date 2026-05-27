@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { sanitizeDigits } from '@/lib/db-utils';
-import { logger } from '@/lib/logger';
+import { logger, getResponsible } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     };
 
     if (password) {
-      logger.warn(`User password reset included in update workerId=${workerId}`);
+      logger.warn(`UserID=${getResponsible(request)} password reset included in update for workerId=${workerId}`);
       const passwordHash = await bcrypt.hash(password, 10);
       updateData.password = Buffer.from(passwordHash, 'utf8');
     }
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       data: updateData,
     });
 
-    logger.info(`User updated workerId=${workerId} userType=${userTypeNumber} cooperativeId=${cooperativeBigInt}`);
+    logger.info(`UserID=${getResponsible(request)} updated user with workerId=${workerId} userType=${userTypeNumber} cooperativeId=${cooperativeBigInt}`);
     return NextResponse.json({ message: 'Usuário atualizado com sucesso' }, { status: 200 });
   } catch (error) {
     console.error('Error updating user:', error);

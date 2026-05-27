@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import prisma from '@/lib/prisma';
 import { decimalToNumber } from '@/lib/db-utils';
-import { logger } from '@/lib/logger';
+import { logger, getResponsible } from '@/lib/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dms-dashboard-secret-key';
 
@@ -63,7 +63,7 @@ export async function PUT(
     }
 
     if (existingSale.responsible !== manager.workerId) {
-      logger.warn(`Sale update denied managerId=${manager.workerId} saleId=${saleId} ownerId=${existingSale.responsible}`);
+      logger.warn(`UserID=${getResponsible(request)} sale update denied managerId=${manager.workerId} saleId=${saleId} ownerId=${existingSale.responsible}`);
       return NextResponse.json(
         { error: 'Você não tem permissão para alterar esta venda' },
         { status: 403 },
@@ -132,7 +132,7 @@ export async function PUT(
     const availableStock = currentStock + existingWeight;
 
     if (weightSold > availableStock) {
-      logger.warn(`Sale update blocked: insufficient stock managerId=${manager.workerId} saleId=${saleId} requestedKg=${weightSold} availableKg=${availableStock}`);
+      logger.warn(`UserID=${getResponsible(request)} sale update blocked: insufficient stock managerId=${manager.workerId} saleId=${saleId} requestedKg=${weightSold} availableKg=${availableStock}`);
       return NextResponse.json(
         { error: `Estoque insuficiente! Disponível: ${availableStock.toFixed(2)} kg` },
         { status: 400 },
@@ -161,7 +161,7 @@ export async function PUT(
       },
     });
 
-    logger.info(`Sale updated saleId=${saleId} managerId=${manager.workerId} weightKg=${weightSold} pricePerKg=${pricePerKg}`);
+    logger.info(`UserID=${getResponsible(request)} updated saleId=${saleId} managerId=${manager.workerId} weightKg=${weightSold} pricePerKg=${pricePerKg}`);
     return NextResponse.json({
       success: true,
       message: 'Venda atualizada com sucesso',
@@ -207,7 +207,7 @@ export async function DELETE(
     }
 
     if (existingSale.responsible !== manager.workerId) {
-      logger.warn(`Sale delete denied managerId=${manager.workerId} saleId=${saleId} ownerId=${existingSale.responsible}`);
+      logger.warn(`UserID=${getResponsible(request)} sale delete denied managerId=${manager.workerId} saleId=${saleId} ownerId=${existingSale.responsible}`);
       return NextResponse.json(
         { error: 'Você não tem permissão para excluir esta venda' },
         { status: 403 },
@@ -244,7 +244,7 @@ export async function DELETE(
       },
     });
 
-    logger.warn(`Sale deleted saleId=${saleId} managerId=${manager.workerId} restoredKg=${existingWeight}`);
+    logger.warn(`UserID=${getResponsible(request)} deleted saleId=${saleId} managerId=${manager.workerId} restoredKg=${existingWeight}`);
     return NextResponse.json({
       success: true,
       message: 'Venda excluída com sucesso',

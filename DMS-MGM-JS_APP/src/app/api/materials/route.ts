@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
-import { logger } from '@/lib/logger';
+import { logger, getResponsible } from '@/lib/logger';
 
 type MaterialWithGroup = Prisma.MaterialsGetPayload<{
   include: { group: true };
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingMaterial) {
-      logger.warn(`Material creation blocked: duplicate materialName=${materialName}`);
+      logger.warn(`UserID=${getResponsible(request)} material creation blocked: duplicate materialName=${materialName}`);
       return NextResponse.json(
         { error: 'Este material já existe' },
         { status: 400 },
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!group) {
-      logger.info(`Creating new material group groupName=${groupName}`);
+      logger.info(`UserID=${getResponsible(request)} creating new material group groupName=${groupName}`);
       group = await prisma.groups.create({
         data: { groupName },
       });
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       include: { group: true },
     });
 
-    logger.info(`Material created materialId=${createdMaterial.materialId} materialName=${materialName} groupId=${group.groupId}`);
+    logger.info(`UserID=${getResponsible(request)} created materialId=${createdMaterial.materialId} materialName=${materialName} groupId=${group.groupId}`);
     return NextResponse.json(
       {
         success: true,

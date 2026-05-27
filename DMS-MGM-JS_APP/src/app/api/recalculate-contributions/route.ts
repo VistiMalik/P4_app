@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { decimalToNumber } from '@/lib/db-utils';
-import { logger } from '@/lib/logger';
+import { logger, getResponsible } from '@/lib/logger';
 
 type MeasurementRecord = {
   workerId: bigint;
@@ -93,7 +93,7 @@ function calculateDailyContributions(measurements: MeasurementRecord[]) {
   return contributions;
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const prismaMeasurements = await prisma.measurments.findMany({
       select: {
@@ -106,7 +106,7 @@ export async function POST() {
     });
 
     if (prismaMeasurements.length === 0) {
-      logger.info("Contribution recalculation skipped: no measurements found");
+      logger.info(`UserID=${getResponsible(request)} contribution recalculation skipped: no measurements found`);
       return NextResponse.json({
         message: 'No measurements found',
         processed: 0,
@@ -155,7 +155,7 @@ export async function POST() {
     });
     const cooperativeMap = new Map(workers.map((worker) => [worker.workerId, worker.cooperative]));
 
-    logger.warn(`Recalculating worker contributions: deleting existing records and rebuilding weeklyContributions=${weeklyContributions.length}`);
+    logger.warn(`UserID=${getResponsible(request)} recalculating worker contributions: deleting existing records and rebuilding weeklyContributions=${weeklyContributions.length}`);
     await prisma.workerContributions.deleteMany();
 
     const now = new Date();
@@ -173,7 +173,7 @@ export async function POST() {
 
     const totalWeight = weeklyContributions.reduce((sum, entry) => sum + entry.totalWeight, 0);
 
-    logger.info(`Contribution recalculation complete processed=${weeklyContributions.length} measurements=${measurements.length}`);
+    logger.info(`UserID=${getResponsible(request)} contribution recalculation complete processed=${weeklyContributions.length} measurements=${measurements.length}`);
     return NextResponse.json({
       message: 'Worker contributions recalculated successfully',
       statistics: {

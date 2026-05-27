@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     const worker = workers[0];
 
     if (!worker) {
-      logger.warn("Login attempt for unknown CPF");
+      logger.warn("UserID=unknown login attempt for unknown CPF");
       return NextResponse.json(
         { message: 'Usuário não encontrado' },
         { status: 401 },
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     const userType = mapUserType(worker.userType);
 
     if (userType !== 0) {
-      logger.warn(`Login attempt from non manager workerId=${worker.workerId}`);
+      logger.warn(`UserID=${worker.workerId} login attempt from non manager workerId=${worker.workerId}`);
       return NextResponse.json(
         { message: 'Acesso restrito apenas para gerentes' },
         { status: 403 },
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     }
 
     if (!passwordIsValid) {
-      logger.warn(`Failed login: invalid password for workerId=${worker.workerId}`);
+      logger.warn(`UserID=${worker.workerId} failed login: invalid password for workerId=${worker.workerId}`);
       return NextResponse.json(
         { message: 'Senha incorreta' },
         { status: 401 },
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       sameSite: 'strict',
     });
 
-    logger.info(`Manager login successful workerId=${workerId}`);
+    logger.info(`UserID=${workerId} manager login successful workerId=${workerId}`);
     return NextResponse.json({
       message: 'Login realizado com sucesso',
       user: {
