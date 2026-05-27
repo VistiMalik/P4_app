@@ -120,6 +120,10 @@ export const weighingsRoutes: FastifyPluginAsync = async (server) => {
       // Verify scale weighing
       try {
         body.weightGrams = await server.jwt.verify(body.weightGrams).weightGrams;
+        // Make sure the weight is actually a positive number
+        if (Number(body.weightGrams) < 0) {
+          throw server.httpErrors.forbidden("Weight should be greater than 0 grams");
+        }
       } catch {
         // Log failed scale verification attempts for security monitoring
         server.log.warn(`Failed scale verification attempt for workerId: ${workerId.toString()}`);
